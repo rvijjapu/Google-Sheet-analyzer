@@ -8,7 +8,7 @@ import re
 import time
 
 # ────────────────────────────────────────────────────────────────
-# PAGE CONFIG + KEEP-ALIVE + AUTO-REFRESH
+# PAGE CONFIG + AUTO-REFRESH EVERY 5 MINUTES
 # ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Global Telecom & OTT Stellar Nexus",
@@ -17,6 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Auto-refresh
 @st.fragment(run_every=300)
 def keep_alive():
     st.markdown("", unsafe_allow_html=True)
@@ -27,7 +28,7 @@ st.markdown(
 )
 
 # ────────────────────────────────────────────────────────────────
-# STYLING (your original + tweaks for better news card readability)
+# YOUR ORIGINAL STYLING + minor readability tweaks
 # ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -82,6 +83,7 @@ st.markdown("""
     .news-card-priority {
         border-left: 5px solid #dc2626;
         background: #fef2f2;
+        box-shadow: 0 4px 12px rgba(220,38,38,0.12);
     }
 
     .news-card:hover, .news-card-priority:hover {
@@ -125,35 +127,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────────────────────
-# PRIORITY & NEWSAPI SETUP
+# PRIORITY KEYWORDS (expanded for better coverage)
 # ────────────────────────────────────────────────────────────────
-PRIORITY_KWS = ["evergent", "nba", "amdocs", "matrixx", "netcracker", "nec", "csg", "sony", "ott", "5g", "vod", "voip", "billing", "bss", "oss"]
+PRIORITY_KWS = [
+    "evergent", "nba", "amdocs", "matrixx", "netcracker", "nec", "csg", "sony",
+    "ott", "5g", "vod", "voip", "billing", "bss", "oss", "streaming", "telecom"
+]
 
-# API key handling (secrets first, then sidebar)
+# ────────────────────────────────────────────────────────────────
+# NEWSAPI KEY (secure: secrets first, then sidebar)
+# ────────────────────────────────────────────────────────────────
 try:
     news_api_key = st.secrets["news_api_key"]
 except:
     news_api_key = None
 
 if not news_api_key:
-    st.sidebar.header("NewsAPI Key (for real-time coverage)")
-    news_api_key = st.sidebar.text_input("Paste your NewsAPI key", type="password", help="https://newsapi.org – free tier ok")
+    st.sidebar.header("NewsAPI Key – for real-time coverage")
+    news_api_key = st.sidebar.text_input("Paste your NewsAPI key", type="password", help="Get free at https://newsapi.org")
     if not news_api_key:
-        st.sidebar.info("Add key for best coverage. Without it, only RSS is used.")
+        st.sidebar.info("Add key for full coverage (recommended). Without it, only RSS feeds shown.")
 
 # ────────────────────────────────────────────────────────────────
-# ENHANCED NEWSAPI FETCH – full coverage of your priorities
+# NEWSAPI FETCH – MAXIMUM COVERAGE OF YOUR PRIORITIES
 # ────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=1800, show_spinner=False)
 def fetch_news_api(key):
     if not key:
         return []
 
-    # Advanced query: group priorities + OR for topics + exclude noise
+    # Very comprehensive query – covers all your companies + telecom/OTT topics
     query = (
         f"({'+evergent OR +nba OR +amdocs OR +matrixx OR +netcracker OR +nec OR +csg OR +sony'} OR "
-        f"('OTT streaming' OR 5G OR VoD OR VoIP OR telecom OR BSS OR OSS)) "
-        f"NOT (crypto OR bitcoin OR ethereum OR 'stock market')"
+        f"('OTT streaming' OR 5G OR VoD OR VoIP OR telecom OR BSS OR OSS OR billing OR churn OR 'content delivery')) "
+        f"NOT (crypto OR bitcoin OR ethereum OR nft OR 'stock market')"
     )
 
     url = (
@@ -173,24 +180,23 @@ def fetch_news_api(key):
             if (datetime.utcnow() - pub).days > 14:
                 continue
 
-            title_desc = (art.get("title", "") + " " + art.get("description", "")).lower()
-            priority = any(kw in title_desc for kw in PRIORITY_KWS)
+            full_text = (art.get("title", "") + " " + art.get("description", "")).lower()
+            priority = any(kw in full_text for kw in PRIORITY_KWS)
 
             items.append({
                 "title": art.get("title", "No title"),
                 "link": art.get("url", "#"),
                 "source": art["source"].get("name", "NewsAPI"),
                 "pub": pub,
-                "category": "mixed",  # we'll assign later
                 "priority": priority
             })
         return items
     except Exception as e:
-        st.sidebar.warning(f"NewsAPI issue: {str(e)}. Using RSS fallback.")
+        st.sidebar.warning(f"NewsAPI error: {str(e)}. Using RSS fallback.")
         return []
 
 # ────────────────────────────────────────────────────────────────
-# RSS FETCH (your original)
+# RSS FETCH (your original feeds)
 # ────────────────────────────────────────────────────────────────
 RSS_FEEDS = [
     ("Telecoms.com", "https://www.telecoms.com/feed", "telco"),
@@ -238,21 +244,25 @@ def fetch_feed(source, url, category):
 
 @st.cache_data(ttl=900, show_spinner=False)
 def load_all_news():
+    # NewsAPI first (real-time, targeted)
     api_items = fetch_news_api(news_api_key)
+
+    # RSS fallback
     rss_items = []
     with ThreadPoolExecutor(max_workers=12) as ex:
         futures = [ex.submit(fetch_feed, s, u, c) for s, u, c in RSS_FEEDS]
         for f in as_completed(futures):
             rss_items.extend(f.result())
 
+    # Combine & sort: priority first, then newest
     all_news = api_items + rss_items
     all_news.sort(key=lambda x: (not x["priority"], x["pub"]), reverse=True)
 
-    # Group by category (NewsAPI items go to 'mixed' → distribute)
+    # Group into your 3 columns
     categorized = {"telco": [], "ott": [], "technology": []}
     for item in all_news:
         title_lower = item["title"].lower()
-        if any(kw in title_lower for kw in ["telecom", "5g", "bss", "oss", "netcracker", "amdocs"]):
+        if any(kw in title_lower for kw in ["telecom", "5g", "bss", "oss", "netcracker", "amdocs", "billing"]):
             categorized["telco"].append(item)
         elif any(kw in title_lower for kw in ["ott", "streaming", "vod", "sony"]):
             categorized["ott"].append(item)
@@ -262,7 +272,7 @@ def load_all_news():
     return categorized
 
 # ────────────────────────────────────────────────────────────────
-# LOADING + HEADER + HERO (unchanged)
+# LOADING ANIMATION + HEADER + HERO (your original)
 # ────────────────────────────────────────────────────────────────
 placeholder = st.empty()
 with placeholder.container():
@@ -283,7 +293,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────────────────────
-# NEWS GRID (now with API priority)
+# MAIN NEWS GRID
 # ────────────────────────────────────────────────────────────────
 with st.spinner("Scanning NewsAPI + RSS for latest signals..."):
     data = load_all_news()
