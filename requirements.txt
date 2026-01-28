@@ -1,4 +1,4 @@
-setuptools>=65.5.1
+setuptools>=70.0.0
 streamlit==1.41.1
 streamlit-gsheets==0.2.0
 pandas==2.2.3
