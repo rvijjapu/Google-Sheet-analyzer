@@ -1,269 +1,78 @@
 import streamlit as st
+import requests
 import pandas as pd
 import plotly.express as px
-from streamlit_gsheets import GSheetsConnection
 
-# ────────────────────────────────────────────────────────────────
-# Page configuration
-# ────────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Sheet Intel",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Daily OTT Insights", page_icon="📡", layout="wide")
 
-# Light modern professional styling
+# Light theme (same as before)
 st.markdown("""
     <style>
-    :root {
-        --bg: #f9fafb;
-        --surface: #ffffff;
-        --text: #111827;
-        --text-muted: #6b7280;
-        --primary: #2563eb;
-        --primary-light: #60a5fa;
-        --border: #e5e7eb;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-    }
-
-    .stApp {
-        background-color: var(--bg);
-    }
-
-    .block-container {
-        padding-top: 2rem !important;
-        max-width: 1400px !important;
-    }
-
-    h1 {
-        color: var(--text);
-        font-weight: 600;
-        letter-spacing: -0.025em;
-        text-align: center;
-        margin-bottom: 0.5rem !important;
-    }
-
-    .subtitle {
-        text-align: center;
-        color: var(--text-muted);
-        font-size: 1.125rem;
-        margin-bottom: 2rem !important;
-    }
-
-    .stTextInput > div > div > input {
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        padding: 0.75rem 1rem;
-        background: white;
-    }
-
-    .stRadio > div {
-        flex-direction: row;
-        gap: 1.25rem;
-        justify-content: center;
-    }
-
-    .stRadio > div > label {
-        background: white;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 500;
-        transition: all 0.15s;
-    }
-
-    .stRadio > div > label:hover,
-    .stRadio > div > label[data-checked="true"] {
-        border-color: var(--primary);
-        color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
-    }
-
-    [data-testid="stMetric"] {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow-sm);
-        padding: 1.25rem 1rem;
-    }
-
-    hr {
-        border-color: var(--border) !important;
-        margin: 2.5rem 0 1.5rem !important;
-    }
+    :root { --bg: #f9fafb; --surface: #ffffff; --text: #111827; --text-muted: #6b7280; --primary: #2563eb; --border: #e5e7eb; }
+    .stApp { background-color: var(--bg); }
+    h1 { text-align: center; color: var(--text); }
+    .subtitle { text-align: center; color: var(--text-muted); }
     </style>
 """, unsafe_allow_html=True)
 
-# ────────────────────────────────────────────────────────────────
-# Header
-# ────────────────────────────────────────────────────────────────
-st.markdown("<h1>Sheet Intel</h1>", unsafe_allow_html=True)
-st.markdown(
-    '<p class="subtitle">Smart analysis of any public Google Sheet – fast, clean, insightful</p>',
-    unsafe_allow_html=True
-)
+st.markdown("<h1>Daily OTT Insights</h1>", unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Telecom OTT news, trends & alerts – updated daily for the team</p>', unsafe_allow_html=True)
 
-# ────────────────────────────────────────────────────────────────
-# Main input
-# ────────────────────────────────────────────────────────────────
-sheet_url = st.text_input(
-    label="Google Sheet URL",
-    placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing",
-    help="The sheet must be shared publicly → Anyone with the link → Viewer",
-    label_visibility="collapsed"
-)
-
-view_mode = st.radio(
-    label="View",
-    options=["Summary", "Charts", "Combined"],
-    horizontal=True,
-    label_visibility="collapsed"
-)
-
-if not sheet_url:
-    st.markdown(
-        """
-        <div style="text-align:center; padding: 5rem 1rem; color: var(--text-muted);">
-            Paste a publicly shared Google Sheet URL to start<br>
-            <small>No login • No installation • Instant results</small>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.stop()
-
-# ────────────────────────────────────────────────────────────────
-# Load & clean data
-# ────────────────────────────────────────────────────────────────
-@st.cache_data(show_spinner="Loading and preparing data...")
-def load_sheet(url):
-    conn = st.connection("gsheet", type=GSheetsConnection, url=url, ttl="10m")
-    worksheets = conn.worksheets()
-    selected = st.selectbox("Worksheet", worksheets, index=0)
-
-    df_raw = conn.read(worksheet=selected)
-    df = df_raw.dropna(how='all').fillna('').copy()
-
-    # Clean column names
-    df.columns = (
-        df.columns.astype(str).str.strip().str.lower()
-        .str.replace(r'[^a-z0-9_]', '_', regex=True)
-        .str.replace(r'_+', '_', regex=True)
-        .str.strip('_')
-    )
-
-    return df, selected
-
+# Try to get API key from Streamlit secrets first (safer)
 try:
-    df, ws_name = load_sheet(sheet_url)
-except Exception:
-    st.error("Could not load the sheet. Please make sure it is shared publicly (Anyone with the link → Viewer).")
-    st.stop()
+    api_key = st.secrets["news_api_key"]
+except:
+    api_key = None
 
-# ────────────────────────────────────────────────────────────────
-# Column detection
-# ────────────────────────────────────────────────────────────────
-def find_col(keywords):
-    for col in df.columns:
-        if any(k.lower() in col for k in keywords):
-            return col
-    return None
+# Fallback: sidebar input if no secret
+if not api_key:
+    st.sidebar.header("NewsAPI Key")
+    api_key = st.sidebar.text_input("Enter your NewsAPI key", type="password", help="Get free from https://newsapi.org")
+    if not api_key:
+        st.info("Enter your NewsAPI key in the sidebar to fetch the latest telecom OTT news.")
+        st.stop()
 
-status_col  = find_col(["status", "state", "stage", "phase"])
-progress_col = find_col(["percent", "%", "complete", "progress", "done"])
-due_col     = find_col(["due", "deadline", "target", "end", "finish"])
-
-# ────────────────────────────────────────────────────────────────
-# Prepare metrics & charts
-# ────────────────────────────────────────────────────────────────
-metrics = {}
-charts = {}
-
-if status_col:
-    valid_status = df[status_col][df[status_col].str.strip() != '']
-    if not valid_status.empty:
-        counts = valid_status.value_counts()
-        metrics["status"] = counts
-
-        charts["pie"] = px.pie(
-            values=counts.values,
-            names=counts.index,
-            title="Status Distribution",
-            hole=0.35,
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-
-        charts["bar"] = px.bar(
-            x=counts.index,
-            y=counts.values,
-            title="Status Counts",
-            text_auto=True,
-            color=counts.index,
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
-
-if progress_col:
+# Fetch function with error handling
+@st.cache_data(ttl=3600, show_spinner="Fetching latest news...")
+def fetch_ott_news(key):
+    url = f"https://newsapi.org/v2/everything?q=(telecom+OR+5G)+OTT+OR+streaming+OR+VoD+OR+VoIP&language=en&sortBy=publishedAt&pageSize=12&apiKey={key}"
     try:
-        cleaned = df[progress_col].astype(str).str.replace(r'[% ]', '', regex=True).replace('', '0')
-        numeric = pd.to_numeric(cleaned, errors='coerce').clip(0, 100)
-        avg = numeric.mean()
-        if not pd.isna(avg):
-            metrics["progress"] = round(avg, 1)
-    except:
-        pass
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        articles = response.json().get("articles", [])
+        if not articles:
+            st.warning("No articles found – try a different query or check quota.")
+            return pd.DataFrame()
+        df = pd.DataFrame(articles)
+        df = df[["publishedAt", "title", "description", "url", "source"]]
+        df["publishedAt"] = pd.to_datetime(df["publishedAt"]).dt.strftime("%d %b %Y %H:%M")
+        df["source"] = df["source"].apply(lambda x: x["name"] if isinstance(x, dict) else x)
+        return df
+    except Exception as e:
+        st.error(f"Error fetching news: {str(e)}. Check key, quota, or internet.")
+        return pd.DataFrame()
 
-# ────────────────────────────────────────────────────────────────
-# Dashboard layout
-# ────────────────────────────────────────────────────────────────
-st.markdown("---")
+news_df = fetch_ott_news(api_key)
 
-if view_mode in ["Summary", "Combined"]:
-    st.subheader("Key Insights")
+# Display news
+st.subheader("Latest Telecom & OTT News")
+if not news_df.empty:
+    for _, row in news_df.iterrows():
+        with st.container(border=True):
+            st.markdown(f"**{row['title']}**")
+            st.caption(f"{row['source']} • {row['publishedAt']}")
+            st.write(row['description'] or "No description available.")
+            st.markdown(f"[Read full article →]({row['url']})")
+else:
+    st.info("No recent news loaded. Regenerate your key at newsapi.org if quota is exceeded.")
 
-    cols = st.columns(4)
+# Sample trend chart (static for now – can connect to real API later)
+st.subheader("OTT Market Snapshot (Sample)")
+trend_data = pd.DataFrame({
+    "Date": ["20-Jan-26", "21-Jan-26", "22-Jan-26", "23-Jan-26", "24-Jan-26", "25-Jan-26", "26-Jan-26", "27-Jan-26"],
+    "Global OTT Revenue (Billion USD)": [651.43, 670.17, 678.62, 693.44, 708.29, 725.01, 740.12, 755.90]
+})
+fig = px.line(trend_data, x="Date", y="Global OTT Revenue (Billion USD)", title="OTT Revenue Trend")
+st.plotly_chart(fig, use_container_width=True)
 
-    cols[0].metric("Total Rows", len(df))
-
-    if "status" in metrics:
-        total_valid = len(df[df[status_col].str.strip() != ''])
-        if total_valid > 0:
-            completed = metrics["status"].get("completed", 0) + metrics["status"].get("done", 0)
-            pct = round(completed / total_valid * 100, 1)
-            cols[1].metric("Est. Completion", f"{pct}%")
-
-    if "progress" in metrics:
-        cols[2].metric("Avg Progress", f"{metrics['progress']}%")
-
-    if "status" in metrics:
-        st.markdown("**Status breakdown**")
-        st.dataframe(
-            metrics["status"].reset_index(name="Count"),
-            column_config={"index": "Status"},
-            use_container_width=True,
-            hide_index=True
-        )
-
-if view_mode in ["Charts", "Combined"]:
-    st.subheader("Visuals")
-
-    if "pie" in charts:
-        st.plotly_chart(charts["pie"], use_container_width=True)
-
-    if "bar" in charts:
-        st.plotly_chart(charts["bar"], use_container_width=True)
-
-# ────────────────────────────────────────────────────────────────
-# Footer / preview
-# ────────────────────────────────────────────────────────────────
-st.markdown("<br>", unsafe_allow_html=True)
-
-with st.expander("Data Preview (cleaned – first 12 rows)"):
-    st.dataframe(df.head(12), use_container_width=True)
-
-st.markdown(
-    "<p style='text-align:center; color:#6b7280; font-size:0.9rem; margin-top:3rem;'>"
-    "Sheet Intel • Public Google Sheets only • No login required</p>",
-    unsafe_allow_html=True
-)
+st.caption("Powered by NewsAPI • For telecom & OTT teams • Regenerate key if expired")
