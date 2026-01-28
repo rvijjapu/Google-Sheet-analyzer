@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Auto-refresh
+# Reliable auto-refresh
 @st.fragment(run_every=300)
 def keep_alive():
     st.markdown("", unsafe_allow_html=True)
@@ -28,7 +28,7 @@ st.markdown(
 )
 
 # ────────────────────────────────────────────────────────────────
-# YOUR ORIGINAL STYLING + minor readability tweaks
+# YOUR ORIGINAL PROFESSIONAL STYLING
 # ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -69,6 +69,15 @@ st.markdown("""
         margin-bottom: 1.5rem;
         border-left: 6px solid #1e40af;
         padding-left: 15px;
+    }
+
+    .evergent-spotlight {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 6px 20px rgba(30,64,175,0.3);
     }
 
     .news-card, .news-card-priority {
@@ -127,47 +136,114 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────────────────────
-# PRIORITY KEYWORDS (expanded for better coverage)
+# COMPREHENSIVE LISTS (all from your message)
 # ────────────────────────────────────────────────────────────────
-PRIORITY_KWS = [
-    "evergent", "nba", "amdocs", "matrixx", "netcracker", "nec", "csg", "sony",
-    "ott", "5g", "vod", "voip", "billing", "bss", "oss", "streaming", "telecom"
-]
+EVERGENT_CLIENTS = {
+    "Astro": ["astro malaysia", "astro sooka", "astro njoi", "astro", "sooka", "njoi"],
+    "MongolTV": ["mongoltv", "mongol tv", "mongolia tv"],
+    "FOX": ["fox sports", "fox corporation", "fox networks", "fox"],
+    "AT&T": ["at&t", "att inc", "att wireless", "directv"],
+    "NBA": ["nba", "national basketball"],
+    "Shahid": ["shahid", "shahid vip", "mbc shahid"],
+    "MBC": ["mbc group", "mbc", "middle east broadcasting"],
+    "TV ASAHI": ["tv asahi", "asahi television", "asahi tv"],
+    "TV3": ["tv3 malaysia", "tv3", "media prima"],
+    "ABS-CBN": ["abs-cbn", "abscbn", "abs cbn", "philippine broadcast"],
+    "Viki": ["viki", "rakuten viki", "viki streaming"],
+    "TRT": ["trt world", "trt", "turkish radio"],
+    "Sinclair": ["sinclair broadcast", "sinclair", "bally sports"],
+    "FanDuel": ["fanduel", "fanduel group", "flutter"],
+    "Bally Sports": ["bally sports", "bally regional", "diamond sports"],
+    "Gotham": ["gotham advanced", "gotham fc"],
+    "Marquee": ["marquee sports", "marquee network"],
+    "Sony": ["sony pictures", "sony entertainment", "sonyliv", "sony india"],
+    "Aha": ["aha video", "aha ott", "aha telugu"],
+    "BBC": ["bbc", "british broadcasting", "bbc iplayer"],
+    "Lightbox": ["lightbox", "spark lightbox"],
+    "Sky": ["sky nz", "sky new zealand", "sky tv", "sky uk", "sky italia", "sky deutschland"],
+    "Cignal": ["cignal tv", "cignal", "cignal satellite"],
+    "ETV": ["etv network", "etv bharat"],
+    "Simple TV": ["simpletv", "simple tv venezuela"],
+    "Telekom Malaysia": ["telekom malaysia", "tm unifi", "unifi tv", "tm"],
+    "Britbox": ["britbox", "britbox international"],
+    "Quickplay": ["quickplay", "quickplay media"],
+    "Pilipinas": ["pilipinas", "abs-cbn"],
+}
+
+COMPETITORS = {
+    "Netcracker": ["netcracker", "netcracker technology", "nec netcracker"],
+    "Amdocs": ["amdocs", "amdocs ltd", "amdocs inc"],
+    "CSG": ["csg systems", "csg international", "csg"],
+    "Oracle": ["oracle communications", "oracle corporation", "oracle telecom"],
+    "Ericsson": ["ericsson", "telefonaktiebolaget lm ericsson"],
+    "Nokia": ["nokia", "nokia networks", "nokia corporation"],
+    "Huawei": ["huawei", "huawei technologies"],
+    "Comarch": ["comarch", "comarch bss"],
+    "Tecnotree": ["tecnotree", "tecnotree corporation"],
+    "MATRIXX": ["matrixx", "matrixx software"],
+    "Optiva": ["optiva", "optiva inc"],
+    "Cerillion": ["cerillion", "cerillion plc"],
+    "AsiaInfo": ["asiainfo", "asiainfo technologies"],
+    "Hansen": ["hansen technologies", "hansen"],
+    "Openet": ["openet", "openet telecom"],
+    "ZTE": ["zte", "zte corporation"],
+    "Mavenir": ["mavenir", "mavenir systems"],
+    "Infosys": ["infosys", "infosys telecom"],
+    "TCS": ["tata consultancy", "tcs", "tata communications"],
+    "Wipro": ["wipro", "wipro digital"],
+    "Tech Mahindra": ["tech mahindra", "mahindra comviva"],
+    "Accenture": ["accenture", "accenture telecom"],
+    "Capgemini": ["capgemini", "capgemini telecom"],
+    "IBM": ["ibm", "ibm telecom", "ibm watson"],
+    "SAP": ["sap", "sap telecom"],
+    "Salesforce": ["salesforce", "salesforce communications"],
+}
+
+# Flatten all names for search
+ALL_NAMES = []
+for d in [EVERGENT_CLIENTS, COMPETITORS]:
+    for k, v in d.items():
+        ALL_NAMES.extend([k.lower()] + [x.lower() for x in v])
+
+ALL_NAMES = list(set(ALL_NAMES))  # unique
 
 # ────────────────────────────────────────────────────────────────
-# NEWSAPI KEY (secure: secrets first, then sidebar)
+# NEWSAPI KEY – secure & reliable
 # ────────────────────────────────────────────────────────────────
+news_api_key = None
+
+# 1. Prefer Streamlit Cloud secrets (recommended for production)
 try:
     news_api_key = st.secrets["news_api_key"]
 except:
-    news_api_key = None
+    pass
 
+# 2. Fallback: sidebar input (for testing or local run)
 if not news_api_key:
-    st.sidebar.header("NewsAPI Key – for real-time coverage")
-    news_api_key = st.sidebar.text_input("Paste your NewsAPI key", type="password", help="Get free at https://newsapi.org")
+    st.sidebar.header("NewsAPI Key (for real-time news)")
+    news_api_key = st.sidebar.text_input(
+        "Paste your NewsAPI key here",
+        type="password",
+        help="Get free key at https://newsapi.org/account"
+    )
     if not news_api_key:
-        st.sidebar.info("Add key for full coverage (recommended). Without it, only RSS feeds shown.")
+        st.sidebar.info("Enter your NewsAPI key for full coverage of Evergent clients, competitors & telcos. Without it, only RSS feeds shown.")
 
 # ────────────────────────────────────────────────────────────────
-# NEWSAPI FETCH – MAXIMUM COVERAGE OF YOUR PRIORITIES
+# NEWSAPI FETCH – covers EVERYTHING in your lists
 # ────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=1800, show_spinner=False)
 def fetch_news_api(key):
     if not key:
         return []
 
-    # Very comprehensive query – covers all your companies + telecom/OTT topics
-    query = (
-        f"({'+evergent OR +nba OR +amdocs OR +matrixx OR +netcracker OR +nec OR +csg OR +sony'} OR "
-        f"('OTT streaming' OR 5G OR VoD OR VoIP OR telecom OR BSS OR OSS OR billing OR churn OR 'content delivery')) "
-        f"NOT (crypto OR bitcoin OR ethereum OR nft OR 'stock market')"
-    )
+    # Build massive query with all your clients, competitors, telcos + topics
+    priority_part = " OR ".join([f"+{name}" for name in ALL_NAMES[:150]])  # safe limit to avoid URL overflow
+    topic_part = "('OTT streaming' OR 5G OR VoD OR VoIP OR telecom OR BSS OR OSS OR billing OR churn OR 'content delivery' OR 'subscription management')"
 
-    url = (
-        f"https://newsapi.org/v2/everything?"
-        f"q={requests.utils.quote(query)}"
-        f"&language=en&sortBy=publishedAt&pageSize=20&apiKey={key}"
-    )
+    query = f"({priority_part} OR {topic_part}) NOT (crypto OR bitcoin OR nft OR ethereum)"
+
+    url = f"https://newsapi.org/v2/everything?q={requests.utils.quote(query)}&language=en&sortBy=publishedAt&pageSize=20&apiKey={key}"
 
     try:
         r = requests.get(url, timeout=10)
@@ -177,11 +253,10 @@ def fetch_news_api(key):
         for art in articles:
             pub_str = art.get("publishedAt")
             pub = datetime.fromisoformat(pub_str.replace("Z", "+00:00")) if pub_str else datetime.utcnow()
-            if (datetime.utcnow() - pub).days > 14:
-                continue
+            if (datetime.utcnow() - pub).days > 30: continue
 
             full_text = (art.get("title", "") + " " + art.get("description", "")).lower()
-            priority = any(kw in full_text for kw in PRIORITY_KWS)
+            priority = any(kw in full_text for kw in PRIORITY_KWS + ALL_NAMES)
 
             items.append({
                 "title": art.get("title", "No title"),
@@ -192,7 +267,7 @@ def fetch_news_api(key):
             })
         return items
     except Exception as e:
-        st.sidebar.warning(f"NewsAPI error: {str(e)}. Using RSS fallback.")
+        st.sidebar.warning(f"NewsAPI failed: {str(e)}. Using RSS fallback.")
         return []
 
 # ────────────────────────────────────────────────────────────────
@@ -236,33 +311,31 @@ def fetch_feed(source, url, category):
                 "source": source,
                 "pub": pub or datetime.now(),
                 "category": category,
-                "priority": any(kw in title.lower() for kw in PRIORITY_KWS)
+                "priority": any(kw in title.lower() for kw in PRIORITY_KWS + ALL_NAMES)
             })
-    except:
-        pass
+    except Exception as e:
+        st.sidebar.warning(f"RSS fetch failed for {source}: {str(e)}")
     return items
 
 @st.cache_data(ttl=900, show_spinner=False)
 def load_all_news():
-    # NewsAPI first (real-time, targeted)
     api_items = fetch_news_api(news_api_key)
-
-    # RSS fallback
     rss_items = []
-    with ThreadPoolExecutor(max_workers=12) as ex:
-        futures = [ex.submit(fetch_feed, s, u, c) for s, u, c in RSS_FEEDS]
-        for f in as_completed(futures):
-            rss_items.extend(f.result())
+    try:
+        with ThreadPoolExecutor(max_workers=12) as ex:
+            futures = [ex.submit(fetch_feed, s, u, c) for s, u, c in RSS_FEEDS]
+            for f in as_completed(futures):
+                rss_items.extend(f.result())
+    except Exception as e:
+        st.sidebar.warning(f"RSS parallel fetch error: {str(e)}")
 
-    # Combine & sort: priority first, then newest
     all_news = api_items + rss_items
     all_news.sort(key=lambda x: (not x["priority"], x["pub"]), reverse=True)
 
-    # Group into your 3 columns
     categorized = {"telco": [], "ott": [], "technology": []}
     for item in all_news:
         title_lower = item["title"].lower()
-        if any(kw in title_lower for kw in ["telecom", "5g", "bss", "oss", "netcracker", "amdocs", "billing"]):
+        if any(kw in title_lower for kw in ["telecom", "5g", "bss", "oss", "netcracker", "amdocs"]):
             categorized["telco"].append(item)
         elif any(kw in title_lower for kw in ["ott", "streaming", "vod", "sony"]):
             categorized["ott"].append(item)
@@ -272,7 +345,7 @@ def load_all_news():
     return categorized
 
 # ────────────────────────────────────────────────────────────────
-# LOADING ANIMATION + HEADER + HERO (your original)
+# LOADING ANIMATION + HEADER + EVERGENT SPOTLIGHT
 # ────────────────────────────────────────────────────────────────
 placeholder = st.empty()
 with placeholder.container():
@@ -288,14 +361,32 @@ placeholder.empty()
 st.markdown("""
 <div class="header-container">
     <h1 class="main-title">Global Telecom & OTT Stellar Nexus</h1>
-    <p class="subtitle">AI Powered Real-time Competitive Intelligence Dashboard</p>
+    <p class="subtitle">AI Powered Real-time Competitive Intelligence Dashboard – Evergent Ecosystem Focus</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ────────────────────────────────────────────────────────────────
+# EVERGENT ECOSYSTEM SPOTLIGHT – comprehensive
+# ────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="evergent-spotlight">
+    <h3 style="margin:0; color:white;">Evergent Technologies Ecosystem Spotlight</h3>
+    <p style="margin:0.5rem 0 0; font-size:0.95rem;">
+        <strong>Clients (publicly known):</strong> Astro/sooka/njoi, MongolTV, FOX, AT&T, NBA, Shahid/MBC, TV Asahi, TV3/Media Prima, ABS-CBN, Viki/Rakuten, TRT, Sinclair/Bally, FanDuel, Gotham, Marquee, Sony/SonyLIV/India, Aha, BBC, Lightbox/Spark, Sky (NZ/UK/Italia), Cignal, ETV, Simple TV, Telekom Malaysia/unifi, Britbox, Quickplay, Pilipinas...
+    </p>
+    <p style="margin:0.5rem 0 0; font-size:0.95rem;">
+        <strong>Competitors:</strong> Netcracker/NEC, Amdocs, CSG, Oracle, Ericsson, Nokia, Huawei, Comarch, Tecnotree, MATRIXX, Optiva, Cerillion, AsiaInfo, Hansen, Openet, ZTE, Mavenir, Infosys, TCS, Wipro, Tech Mahindra, Accenture, Capgemini, IBM, SAP, Salesforce...
+    </p>
+    <p style="margin:0.5rem 0 0; font-size:0.9rem;">
+        <strong>Top Telcos:</strong> Verizon, AT&T, T-Mobile, Comcast, Charter, Cox, Lumen, Frontier, Windstream, Mediacom, Altice, BT, Vodafone, O2, Virgin Media, Three, Orange, Deutsche Telekom, Telefónica, Telecom Italia, Swisscom, KPN, Proximus, Telenor, Telia, Bouygues, Singtel, StarHub, M1, Maxis, Celcom, Digi, Telekom Malaysia, U Mobile, Sky NZ, Spark, 2degrees, Telstra, Optus, TPG, China Mobile, China Telecom, China Unicom, NTT, SoftBank, KDDI, Reliance Jio, Airtel, Vi, BSNL, SK Telecom, KT, LG Uplus, Globe, PLDT, Smart, Etisalat, Du, STC, Ooredoo, Zain, Mobily, América Móvil, Telus, Rogers, Bell, Shaw, MTN, Vodacom, Safaricom...
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────────────────────
 # MAIN NEWS GRID
 # ────────────────────────────────────────────────────────────────
-with st.spinner("Scanning NewsAPI + RSS for latest signals..."):
+with st.spinner("Scanning NewsAPI + RSS for latest Evergent & ecosystem signals..."):
     data = load_all_news()
 
 cols = st.columns(3)
@@ -310,7 +401,7 @@ for i, (cat, name, style, icon) in enumerate(sections):
         st.markdown(f'<div class="{style}">{icon} {name}</div>', unsafe_allow_html=True)
         items = data.get(cat, [])[:12]
         if not items:
-            st.markdown('<div style="text-align:center; color:#94a3b8; padding:40px;">No recent signals...</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center; color:#94a3b8; padding:40px;">No recent signals – check key or refresh...</div>', unsafe_allow_html=True)
             continue
 
         for item in items:
@@ -337,7 +428,7 @@ for i, (cat, name, style, icon) in enumerate(sections):
 st.markdown("""
 <div style="text-align:center; color:rgba(255,255,255,0.9); font-size:0.85rem; margin:3rem 0; padding:1.2rem; background:linear-gradient(135deg,rgba(10,25,47,0.9),rgba(30,41,59,0.9)); border-radius:12px;">
     <strong>Focus:</strong> Mergers • Acquisitions • Partnerships • Deals • Strategic Moves<br>
-    <strong>Priority:</strong> Evergent / NBA / Netcracker / Amdocs / NEC / CSG / Sony OTT<br>
+    <strong>Priority:</strong> Evergent & full ecosystem (clients, competitors, top telcos)<br>
     <strong>Live:</strong> NewsAPI + RSS • Auto-refresh every 5 min • Powered by Srinivasa Dasu @saptechsrini
 </div>
 """, unsafe_allow_html=True)
